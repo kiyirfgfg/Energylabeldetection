@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no" />
+  <meta name="theme-color" content="#3b82f6" />
+  <title>能效标签检测系统</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+<div class="app">
+
+  <div id="authPage" class="auth-page">
+    <div id="loginBox" class="auth-card">
+      <div class="auth-header">
+        <div class="auth-logo">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 2L2 7l10 5 10-5-10-5z" />
+            <path d="M2 17l10 5 10-5" />
+            <path d="M2 12l10 5 10-5" />
+          </svg>
+        </div>
+        <div class="auth-title">能效标签检测系统</div>
+        <div class="auth-subtitle">工业质检 · 智能识别 · 数据分析</div>
+      </div>
+
+      <div class="form-group">
+        <label>用户名</label>
+        <input id="loginUsername" type="text" placeholder="请输入用户名" />
+      </div>
+      <div class="form-group">
+        <label>密码</label>
+        <input id="loginPassword" type="password" placeholder="请输入密码" />
+      </div>
+      <button class="btn btn-primary btn-full" onclick="login()">登录</button>
+
+      <div class="default-users">
+        <strong>默认账号</strong><br />
+        admin / 123456<br />
+        operator1 / 123456<br />
+        <a onclick="resetDefaultUsers()" style="color: var(--primary); cursor: pointer; font-size: 12px;">重置默认用户</a>
+      </div>
+
+      <div class="switch-text">
+        没有账号？ <a onclick="showRegister()">去注册</a>
+      </div>
+    </div>
+
+    <div id="registerBox" class="auth-card hidden">
+      <div class="auth-header">
+        <div class="auth-logo">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+            <circle cx="8.5" cy="7" r="4" />
+            <line x1="20" y1="8" x2="20" y2="14" />
+            <line x1="23" y1="11" x2="17" y2="11" />
+          </svg>
+        </div>
+        <div class="auth-title">注册账号</div>
+        <div class="auth-subtitle">创建新用户</div>
+      </div>
+
+      <div class="form-group">
+        <label>用户名</label>
+        <input id="regUsername" type="text" placeholder="请输入用户名" />
+      </div>
+      <div class="form-group">
+        <label>密码</label>
+        <input id="regPassword" type="password" placeholder="请输入密码" />
+      </div>
+      <div class="form-group">
+        <label>角色</label>
+        <select id="regRole">
+          <option value="operator">操作员</option>
+          <option value="admin">管理员</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>姓名</label>
+        <input id="regName" type="text" placeholder="请输入姓名" />
+      </div>
+      <button class="btn btn-primary btn-full" onclick="register()">注册</button>
+
+      <div class="switch-text">
+        已有账号？ <a onclick="showLogin()">去登录</a>
+      </div>
+    </div>
+  </div>
+
+  <div id="mainPage" class="hidden">
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-brand">
+          <div class="sidebar-brand-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 2L2 7l10 5 10-5-10-5z" />
+              <path d="M2 17l10 5 10-5" />
+              <path d="M2 12l10 5 10-5" />
+            </svg>
+          </div>
+          <span>能效检测系统</span>
+        </div>
+      </div>
+
+      <nav class="menu">
+        <button class="menu-item active" data-tab="dashboard" onclick="showTab('dashboard')">数据总览</button>
+        <button class="menu-item" data-tab="detect" onclick="showTab('detect')">检测中心</button>
+        <button class="menu-item" data-tab="records" onclick="showTab('records')">检测记录</button>
+        <button class="menu-item" data-tab="charts" onclick="showTab('charts')">统计图表</button>
+        <button class="menu-item" data-tab="lines" onclick="showTab('lines')">产线配置</button>
+        <button class="menu-item admin-only" data-tab="users" id="usersMenuItem" onclick="showTab('users')">用户管理</button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="user-info">
+          <div class="user-avatar" id="userAvatar">A</div>
+          <div class="user-meta">
+            <div class="user-name" id="userName">Admin</div>
+            <div class="user-role" id="userRole">管理员</div>
+          </div>
+        </div>
+        <button class="btn btn-secondary btn-full" onclick="logout()">退出登录</button>
+      </div>
+    </aside>
+
+    <main class="content">
+      <div class="topbar">
+        <div>
+          <h1 class="page-title" id="pageTitle">数据总览</h1>
+          <p class="page-subtitle" id="pageSubtitle">实时查看检测数据与统计信息</p>
+        </div>
+        <div class="top-actions">
+          <button class="btn btn-secondary" onclick="refreshAll()">刷新</button>
+          <button class="btn btn-primary" onclick="exportToExcel()">导出Excel</button>
+          <button class="btn btn-secondary" onclick="openHelpModal()">帮助</button>
+        </div>
+      </div>
+
+      <div id="tab-dashboard" class="tab-section">
+        <div class="stats-grid">
+          <div class="stat-card"><div class="stat-icon blue"></div><div class="stat-content"><div class="stat-value" id="statTotal">0</div><div class="stat-label">总检测数</div></div></div>
+          <div class="stat-card"><div class="stat-icon green"></div><div class="stat-content"><div class="stat-value" id="statNormal">0</div><div class="stat-label">正常标签</div></div></div>
+          <div class="stat-card"><div class="stat-icon red"></div><div class="stat-content"><div class="stat-value" id="statDefect">0</div><div class="stat-label">缺陷标签</div></div></div>
+          <div class="stat-card"><div class="stat-icon yellow"></div><div class="stat-content"><div class="stat-value" id="statPending">0</div><div class="stat-label">待处理</div></div></div>
+          <div class="stat-card"><div class="stat-icon blue"></div><div class="stat-content"><div class="stat-value" id="statToday">0</div><div class="stat-label">今日数据</div></div></div>
+          <div class="stat-card"><div class="stat-icon green"></div><div class="stat-content"><div class="stat-value" id="statMonth">0</div><div class="stat-label">近一月数据</div></div></div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">最近检测记录</div>
+              <div class="card-subtitle">显示最近10条检测数据</div>
+            </div>
+            <button class="btn btn-secondary btn-sm" onclick="showTab('records')">查看全部</button>
+          </div>
+          <div class="record-list" id="recentRecords"></div>
+        </div>
+      </div>
+
+      <div id="tab-detect" class="tab-section hidden">
+        <div class="detect-layout">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">图像采集</div>
+            </div>
+
+            <div class="line-select">
+              <label>选择产线</label>
+              <select id="lineSelect" onchange="changeLine(this.value)"></select>
+            </div>
+
+            <div class="camera-box">
+              <div class="camera-placeholder" id="cameraPlaceholder">
+                <div>点击"开启摄像头"开始检测</div>
+              </div>
+              <video id="cameraVideo" class="camera-video hidden" autoplay playsinline></video>
+              <canvas id="previewCanvas" class="camera-video hidden"></canvas>
+            </div>
+
+            <div class="camera-actions">
+              <button class="btn btn-success" onclick="captureAndDetectWithCamera()">拍照检测</button>
+              <div class="btn btn-secondary upload-btn">
+                上传图片
+                <input type="file" accept="image/*" onchange="uploadImage(event)" />
+              </div>
+            </div>
+          </div>
+
+          <div class="result-card">
+            <div class="result-empty" id="resultEmpty">
+              <div>暂无检测结果</div>
+              <div style="font-size:13px;margin-top:8px;">请先进行拍照或上传图片</div>
+            </div>
+
+            <div id="resultContent" class="hidden">
+              <div class="result-preview">
+                <img id="resultPreviewImage" src="" alt="检测预览" />
+              </div>
+
+              <div class="result-header">
+                <span class="result-badge" id="resultBadge">正常</span>
+                <span class="result-time" id="resultTime"></span>
+              </div>
+
+              <div class="result-grid">
+                <div class="result-item"><span class="result-item-label">操作员</span><span class="result-item-value" id="resultOperator">-</span></div>
+                <div class="result-item"><span class="result-item-label">产线</span><span class="result-item-value" id="resultLine">-</span></div>
+                <div class="result-item"><span class="result-item-label">能效等级</span><span class="result-item-value" id="resultLevel">-</span></div>
+                <div class="result-item"><span class="result-item-label">缺陷类型</span><span class="result-item-value" id="resultDefectType">-</span></div>
+                <div class="result-item"><span class="result-item-label">缺陷说明</span><span class="result-item-value" id="resultDefectDetail">-</span></div>
+                <div class="result-item"><span class="result-item-label">异常位置</span><span class="result-item-value" id="resultArea">-</span></div>
+                <div class="result-item"><span class="result-item-label">偏差方向</span><span class="result-item-value" id="resultDirection">-</span></div>
+                <div class="result-item"><span class="result-item-label">偏差距离</span><span class="result-item-value" id="resultDeviation">-</span></div>
+                <div class="result-item"><span class="result-item-label">置信度</span><span class="result-item-value" id="resultConfidence">-</span></div>
+                <div class="result-item"><span class="result-item-label">处理状态</span><span class="result-item-value" id="resultProcessed">-</span></div>
+              </div>
+
+              <div class="result-footer">
+                <button class="btn btn-success" onclick="markProcessed()">标记已处理</button>
+                <button class="btn btn-secondary" onclick="resetDetect()">重新检测</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="tab-records" class="tab-section hidden">
+        <div class="card">
+          <div class="filter-bar">
+            <select id="filterProcessed">
+              <option value="all">全部状态</option>
+              <option value="processed">已处理</option>
+              <option value="unprocessed">未处理</option>
+            </select>
+            <select id="filterDefectType">
+              <option value="all">全部类型</option>
+              <option value="NORMAL">正常</option>
+              <option value="DAMAGE">破损</option>
+              <option value="STAIN">污渍</option>
+              <option value="WRINKLE">褶皱</option>
+              <option value="POSITION_DEVIATION">位置偏差</option>
+            </select>
+            <select id="filterLabelLevel">
+              <option value="all">全部等级</option>
+              <option value="一级能效">一级能效</option>
+              <option value="二级能效">二级能效</option>
+              <option value="三级能效">三级能效</option>
+              <option value="四级能效">四级能效</option>
+              <option value="五级能效">五级能效</option>
+            </select>
+            <input type="date" id="filterDate" />
+            <button class="btn btn-primary" onclick="applyRecordFilter()">筛选</button>
+            <button class="btn btn-secondary" onclick="clearRecordFilter()">清空</button>
+          </div>
+
+          <div class="record-list" id="recordList"></div>
+        </div>
+      </div>
+
+      <div id="tab-charts" class="tab-section hidden">
+        <div class="card">
+          <div class="chart-tabs">
+            <button class="chart-tab active" data-chart="trend" onclick="switchChart('trend')">检测趋势</button>
+            <button class="chart-tab" data-chart="defect" onclick="switchChart('defect')">缺陷占比</button>
+            <button class="chart-tab" data-chart="line" onclick="switchChart('line')">产线统计</button>
+            <button class="chart-tab" data-chart="level" onclick="switchChart('level')">能级统计</button>
+            <button class="chart-tab" data-chart="status" onclick="switchChart('status')">正常/缺陷占比</button>
+          </div>
+
+          <div id="operatorFilterContainer" class="filter-bar hidden">
+            <label>操作员筛选</label>
+            <select id="operatorFilter" onchange="changeOperatorFilter(this.value)">
+              <option value="all">全部操作员</option>
+            </select>
+          </div>
+
+          <div class="chart-timebar">
+            <button class="time-btn active" data-range="today" onclick="changeChartRange('today')">今日</button>
+            <button class="time-btn" data-range="7d" onclick="changeChartRange('7d')">近7天</button>
+            <button class="time-btn" data-range="1m" onclick="changeChartRange('1m')">近1月</button>
+            <button class="time-btn" data-range="1y" onclick="changeChartRange('1y')">近1年</button>
+          </div>
+
+          <div class="chart-container">
+            <div id="chartBox" class="chart-box"></div>
+          </div>
+
+          <div class="chart-summary">
+            <div class="summary-item"><div class="summary-label">总检测数</div><div class="summary-value" id="summaryTotal">0</div></div>
+            <div class="summary-item"><div class="summary-label">正常率</div><div class="summary-value" id="summaryNormal">0%</div></div>
+            <div class="summary-item"><div class="summary-label">缺陷率</div><div class="summary-value" id="summaryDefect">0%</div></div>
+            <div class="summary-item"><div class="summary-label">已处理率</div><div class="summary-value" id="summaryProcessed">0%</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div id="tab-lines" class="tab-section hidden">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">产线配置</div>
+              <div class="card-subtitle">管理生产线与设备状态</div>
+            </div>
+            <button class="btn btn-primary btn-sm" onclick="addLine()">新增产线</button>
+          </div>
+          <div class="line-list" id="lineList"></div>
+        </div>
+      </div>
+
+      <div id="tab-users" class="tab-section hidden">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">用户管理</div>
+              <div class="card-subtitle">管理系统用户与权限</div>
+            </div>
+            <button class="btn btn-primary btn-sm" onclick="addUser()">添加用户</button>
+          </div>
+          <div class="user-list" id="userList"></div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <div id="helpModal" class="modal-overlay hidden" onclick="closeHelpModal(event)">
+    <div class="modal">
+      <div class="modal-header">
+        <div class="modal-title">功能说明</div>
+        <button class="modal-close" onclick="closeHelpModal(event)">✕</button>
+      </div>
+      <div class="modal-body">
+        <p>1. 支持摄像头拍照检测和图片上传检测。</p>
+        <p>2. 支持 OCR 识别和缺陷检测结果展示。</p>
+        <p>3. 支持检测记录筛选、处理和导出。</p>
+        <p>4. 管理员可按操作员查看统计图表和数据。</p>
+      </div>
+    </div>
+  </div>
+
+  <div id="imageModal" class="image-modal hidden" onclick="closeImageModal()">
+    <button class="image-modal-close" onclick="closeImageModal()">✕</button>
+    <img id="modalImage" src="" alt="预览图片" />
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
